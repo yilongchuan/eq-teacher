@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [errorMessage, setErrorMessage] = useState<string>('认证过程中发生错误')
@@ -75,5 +75,28 @@ export default function AuthErrorPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md text-center">
+        <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+          <svg className="w-6 h-6 text-gray-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+        <h2 className="mt-6 text-2xl font-bold text-gray-900">加载中...</h2>
+      </div>
+    </div>
+  )
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthErrorContent />
+    </Suspense>
   )
 } 
