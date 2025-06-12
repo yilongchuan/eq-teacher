@@ -1,0 +1,770 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Avatar } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface Scenario {
+  id: string;
+  title: string;
+  domain: string;
+  difficulty: number;
+  character: {
+    name: string;
+    role: string;
+    personality: string;
+    avatar: string;
+    background: string;
+  };
+  scenario_context: string;
+  system_prompt: string;
+  rubric: any[];
+}
+
+interface ChatInterfaceProps {
+  scenarioId: string;
+  sessionId?: string | null;
+  onComplete?: () => void;
+}
+
+export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfaceProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionId || null);
+  const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [currentTurn, setCurrentTurn] = useState(0);
+  const [maxTurns] = useState(3);
+  const [evaluation, setEvaluation] = useState<any>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 获取场景信息并初始化对话
+  useEffect(() => {
+    if (sessionId) {
+      // 加载已有会话
+      fetchSession(sessionId);
+    } else if (scenarioId) {
+      // 新场景，获取场景信息并初始化对话
+      initializeScenario();
+    }
+  }, [sessionId, scenarioId]);
+
+  const fetchSession = async (sessionId: string) => {
+    try {
+      setIsInitializing(true);
+      const response = await fetch(`/api/sessions/${sessionId}`);
+      if (!response.ok) throw new Error('Failed to fetch session');
+      const sessionData = await response.json();
+      
+      setMessages(sessionData.messages || []);
+      setCurrentTurn(sessionData.turn_count || 0);
+      setCurrentSessionId(sessionId);
+      
+      // 如果会话已完成且有评分信息，设置评分
+      if (sessionData.status === 'completed' && sessionData.overall_score) {
+        setEvaluation({
+          overall_score: sessionData.overall_score,
+          objective_achievement_rate: sessionData.objective_achievement_rate,
+          feedback: sessionData.feedback,
+          improvement_suggestions: sessionData.improvement_suggestions
+        });
+      }
+      
+      // 尝试获取场景信息
+      if (sessionData.scenario_id) {
+        const scenarioResponse = await fetch(`/api/scenarios/${sessionData.scenario_id}`);
+        if (scenarioResponse.ok) {
+          const scenarioData = await scenarioResponse.json();
+          setScenario(scenarioData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching session:', error);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  const initializeScenario = async () => {
+    try {
+      setIsInitializing(true);
+      console.log('Initializing scenario with ID:', scenarioId);
+      
+      // 获取场景信息
+      const response = await fetch(`/api/scenarios/${scenarioId}`);
+      if (!response.ok) {
+        console.error('Failed to fetch scenario, status:', response.status);
+        throw new Error('Failed to fetch scenario');
+      }
+      
+      const scenarioData = await response.json();
+      console.log('Fetched scenario data:', scenarioData);
+      
+      if (!scenarioData || !scenarioData.system_prompt) {
+        console.error('Invalid scenario data:', scenarioData);
+        throw new Error('Invalid scenario data');
+      }
+      
+      // 如果数据库中没有角色信息，使用默认值
+      if (!scenarioData.character) {
+        scenarioData.character = {
+          name: getDefaultCharacterName(scenarioData.domain),
+          role: getDefaultCharacterRole(scenarioData.domain),
+          personality: '友好',
+          avatar: getDefaultCharacterAvatar(scenarioData.domain),
+          background: ''
+        };
+      }
+      
+      if (!scenarioData.scenario_context) {
+        scenarioData.scenario_context = scenarioData.title;
+      }
+      
+      setScenario(scenarioData);
+
+      // AI主动发起对话并创建会话
+      const initialMessage = await generateInitialMessage(scenarioData);
+      console.log('Generated initial message:', initialMessage);
+      
+      // 创建会话
+      const sessionResponse = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenarioId,
+          message: '开始对话', // 使用一个占位符消息
+          isInitializing: true // 标记这是初始化调用
+        }),
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to create session');
+      }
+
+      const sessionData = await sessionResponse.json();
+      setCurrentSessionId(sessionData.sessionId);
+      
+      // 设置消息：AI的开场白
+      setMessages([{ role: 'assistant', content: initialMessage }]);
+      // AI的开场白不算轮次，从0开始
+      setCurrentTurn(0);
+    } catch (error) {
+      console.error('Error initializing scenario:', error);
+      // 如果初始化失败，使用默认消息
+      if (scenarioId) {
+        const defaultScenario = {
+          id: scenarioId,
+          title: '情商对话练习',
+          domain: 'general',
+          difficulty: 1,
+          character: {
+            name: 'AI助手',
+            role: '对话伙伴',
+            personality: '友好',
+            avatar: '🤖',
+            background: ''
+          },
+          scenario_context: '这是一个情商对话练习场景',
+          system_prompt: '你是一个情商对话练习的AI助手。',
+          rubric: []
+        };
+        setScenario(defaultScenario);
+        setMessages([{ role: 'assistant', content: '你好！欢迎来到情商对话练习。让我们开始吧！' }]);
+      }
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  const getDefaultCharacterName = (domain: string) => {
+    const nameMap: { [key: string]: string } = {
+      'family': '妈妈',
+      'workplace': '同事',
+      'friendship': '朋友',
+      'romantic': '恋人',
+      'social': '新朋友'
+    };
+    return nameMap[domain] || 'AI助手';
+  };
+
+  const getDefaultCharacterRole = (domain: string) => {
+    const roleMap: { [key: string]: string } = {
+      'family': '家庭成员',
+      'workplace': '工作伙伴',
+      'friendship': '好朋友',
+      'romantic': '恋爱对象',
+      'social': '社交伙伴'
+    };
+    return roleMap[domain] || '对话伙伴';
+  };
+
+  const getDefaultCharacterAvatar = (domain: string) => {
+    const avatarMap: { [key: string]: string } = {
+      'family': '👩‍👧‍👦',
+      'workplace': '👨‍💼',
+      'friendship': '👥',
+      'romantic': '💕',
+      'social': '🎉'
+    };
+    return avatarMap[domain] || '🤖';
+  };
+
+  const generateInitialMessage = async (scenarioData: Scenario) => {
+    try {
+      const response = await fetch('/api/generate-initial-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scenarioData }),
+      });
+      if (!response.ok) throw new Error('Failed to generate initial message');
+      const data = await response.json();
+      return data.message;
+    } catch (error) {
+      console.error('Error generating initial message:', error);
+      // 回退到默认消息
+      return getDefaultInitialMessage(scenarioData);
+    }
+  };
+
+  const getDefaultInitialMessage = (scenarioData: Scenario) => {
+    // 根据场景类型生成默认的开场白
+    switch (scenarioData.domain) {
+      case 'family':
+        return "大家好！今天的晚餐真丰盛呢。我想我们可以聊聊最近都在忙什么，分享一下彼此的生活。妈妈，您今天工作怎么样？";
+      case 'workplace':
+        return "你好！很高兴见到你。我想我们可以开始今天的讨论了。关于这个项目，你有什么想法吗？";
+      case 'friendship':
+        return "嗨！好久不见了！最近过得怎么样？我们找个地方坐下来好好聊聊吧。";
+      case 'romantic':
+        return "你好，很高兴能和你在这里见面。这个地方真不错，你觉得呢？";
+      case 'social':
+        return "你好！我注意到你也在这里，介意我过来和你聊聊吗？";
+      default:
+        return "你好！很高兴认识你。我们开始对话吧！";
+    }
+  };
+
+  const getDomainName = (domain: string) => {
+    const domainMap: { [key: string]: string } = {
+      'workplace': '职场沟通',
+      'family': '家庭关系',
+      'friendship': '朋友交往',
+      'romantic': '恋爱关系',
+      'social': '社交场合'
+    };
+    return domainMap[domain] || domain;
+  };
+
+  const getDifficultyName = (difficulty: number) => {
+    const difficultyMap: { [key: number]: string } = {
+      1: '初级',
+      2: '中级',
+      3: '高级'
+    };
+    return difficultyMap[difficulty] || '未知';
+  };
+
+  const getCharacterInfo = (scenario: Scenario | null) => {
+    // 使用场景中的动态角色信息
+    if (scenario && scenario.character) {
+      return {
+        name: scenario.character.name,
+        avatar: scenario.character.avatar,
+        role: scenario.character.role
+      };
+    }
+    
+    // 回退到默认值
+    return { name: 'AI助手', avatar: '🤖', role: '对话伙伴' };
+  };
+
+  const evaluateSession = async (sessionId: string) => {
+    try {
+      setIsEvaluating(true);
+      const response = await fetch('/api/eval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to evaluate session');
+      }
+
+      const data = await response.json();
+      setEvaluation(data.evaluation);
+    } catch (error) {
+      console.error('Error evaluating session:', error);
+      // 显示评分失败的消息
+      setEvaluation({
+        overall_score: 75,
+        feedback: '评分系统暂时不可用，但您已经完成了3轮情商训练！',
+        improvement_suggestions: ['继续练习沟通技巧', '多观察对方的情绪反应', '保持耐心和同理心']
+      });
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    setIsLoading(true);
+
+    // 添加用户消息到界面
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          message: userMessage,
+          scenarioId: !currentSessionId ? scenarioId : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      
+      // 更新会话ID（如果是新会话）
+      if (data.sessionId && !currentSessionId) {
+        setCurrentSessionId(data.sessionId);
+      }
+
+      // 添加AI回复到界面
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      
+      // 更新轮次信息
+      const newTurn = data.turn || currentTurn + 1;
+      setCurrentTurn(newTurn);
+      
+      // 检查是否达到最大轮次
+      if (newTurn >= maxTurns && data.sessionId) {
+        // 3轮对话结束，开始评分
+        setTimeout(() => {
+          evaluateSession(data.sessionId || currentSessionId!);
+        }, 1000); // 1秒后开始评分
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // 移除用户消息（因为发送失败）
+      setMessages(prev => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, evaluation, isEvaluating]);
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* 场景信息区域 */}
+      {scenario && (
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 px-4 py-3 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">{getCharacterInfo(scenario).avatar}</div>
+              <div>
+                <h3 className="font-medium text-gray-900">{scenario.title}</h3>
+                <div className="flex items-center space-x-4 text-xs text-gray-600 mt-1">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {getDomainName(scenario.domain)}
+                  </span>
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    {getDifficultyName(scenario.difficulty)}
+                  </span>
+                  <span className="text-gray-500">
+                    角色：{getCharacterInfo(scenario).name} ({getCharacterInfo(scenario).role})
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-700">
+                第 {Math.min(currentTurn, maxTurns)} / {maxTurns} 轮
+              </div>
+              <div className="text-xs text-gray-500">
+                情商训练对话
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 聊天消息区域 - 包含所有内容的统一滚动区域，强制滚动 */}
+      <div 
+        className="flex-1 p-4 space-y-4" 
+        style={{ 
+          overflowY: 'auto', 
+          overflowX: 'hidden',
+          height: '100%',
+          minHeight: 0,
+          maxHeight: '100%'
+        }}
+      >
+        {/* 场景背景说明 */}
+        {scenario && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start space-x-3">
+              <div className="text-2xl">📋</div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-2">场景背景</h4>
+                <p className="text-sm text-blue-800 mb-3">
+                  {scenario.scenario_context || `这是一个${getDomainName(scenario.domain)}的情商训练场景。您将与${getCharacterInfo(scenario).name}进行对话，练习您的沟通技巧。`}
+                </p>
+                <div className="text-xs text-blue-600">
+                  💡 提示：运用情商技巧，注意对方的情绪和需求，找到最佳的沟通方式。
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {isInitializing ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">正在准备情商训练场景...</p>
+          </div>
+        ) : (
+          <>
+            {/* 聊天消息 */}
+            {messages.map((message, index) => (
+              <MessageBubble key={index} message={message} isUser={message.role === 'user'} />
+            ))}
+            
+            {/* 评分结果区域 - 作为对话的最后部分显示 */}
+            {evaluation && (
+              <div className="space-y-4 mt-6">
+                <div className="text-center py-6 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-3xl mb-3">🎉</div>
+                  <div className="text-xl font-medium text-green-600 mb-3">
+                    情商训练完成！
+                  </div>
+                  <div className="text-4xl font-bold text-green-700 mb-3">
+                    {evaluation.overall_score}/100
+                  </div>
+                  <div className="text-sm text-gray-600 mb-3">
+                    综合情商评分
+                  </div>
+                  {evaluation.objective_achievement_rate !== undefined && evaluation.objective_achievement_rate !== evaluation.overall_score && (
+                    <div className="text-sm text-blue-600 bg-blue-100 px-3 py-1 rounded-full inline-block">
+                      沟通目标达成率: {evaluation.objective_achievement_rate}%
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-3 text-lg">💡 反馈评价</h4>
+                  <p className="text-sm text-blue-800 mb-4 leading-relaxed">{evaluation.feedback}</p>
+                  
+                  {evaluation.improvement_suggestions && evaluation.improvement_suggestions.length > 0 && (
+                    <div className="mt-5">
+                      <h5 className="font-medium text-blue-900 mb-4 text-lg">🎯 改进建议</h5>
+                      <div className="text-sm text-blue-800 space-y-4">
+                        {evaluation.improvement_suggestions.map((suggestion: string, index: number) => (
+                          <div key={index} className="flex items-start leading-relaxed">
+                            <span className="mr-3 mt-2 flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full"></span>
+                            <span className="flex-1">{suggestion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                  >
+                    再次训练
+                  </button>
+                  <button
+                    onClick={() => onComplete && onComplete()}
+                    className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    查看历史
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 评估中状态 */}
+            {isEvaluating && (
+              <div className="text-center py-8 bg-yellow-50 rounded-lg border border-yellow-200 mt-6">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <div className="text-lg font-medium text-blue-600 mb-2">
+                  正在评估您的表现...
+                </div>
+                <div className="text-sm text-gray-600">
+                  AI正在分析您的沟通技巧和情商表现
+                </div>
+              </div>
+            )}
+
+            {/* 训练完成等待评分状态 */}
+            {currentTurn >= maxTurns && !evaluation && !isEvaluating && (
+              <div className="text-center py-8 bg-green-50 rounded-lg border border-green-200 mt-6">
+                <div className="text-2xl mb-3">✅</div>
+                <div className="text-lg font-medium text-green-600 mb-2">
+                  🎉 情商训练完成！
+                </div>
+                <div className="text-sm text-gray-600">
+                  您已完成 {maxTurns} 轮对话训练，系统正在为您生成评分和建议...
+                </div>
+              </div>
+            )}
+          </>
+        )}
+              <div className="space-y-4 mt-6">
+                <div className="text-center py-6 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-3xl mb-3">🎉</div>
+                  <div className="text-xl font-medium text-green-600 mb-3">
+                    情商训练完成！
+                  </div>
+                  <div className="text-4xl font-bold text-green-700 mb-3">
+                    {evaluation.overall_score}/100
+                  </div>
+                  <div className="text-sm text-gray-600 mb-3">
+                    综合情商评分
+                  </div>
+                  {evaluation.objective_achievement_rate !== undefined && evaluation.objective_achievement_rate !== evaluation.overall_score && (
+                    <div className="text-sm text-blue-600 bg-blue-100 px-3 py-1 rounded-full inline-block">
+                      沟通目标达成率: {evaluation.objective_achievement_rate}%
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-3 text-lg">💡 反馈评价</h4>
+                  <p className="text-sm text-blue-800 mb-4 leading-relaxed">{evaluation.feedback}</p>
+                  
+                  {evaluation.improvement_suggestions && evaluation.improvement_suggestions.length > 0 && (
+                    <div className="mt-5">
+                      <h5 className="font-medium text-blue-900 mb-4 text-lg">🎯 改进建议</h5>
+                      <div className="text-sm text-blue-800 space-y-4">
+                        {evaluation.improvement_suggestions.map((suggestion: string, index: number) => (
+                          <div key={index} className="flex items-start leading-relaxed">
+                            <span className="mr-3 mt-2 flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full"></span>
+                            <span className="flex-1">{suggestion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                  >
+                    再次训练
+                  </button>
+                  <button
+                    onClick={() => onComplete && onComplete()}
+                    className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    查看历史
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 评估中状态 */}
+            {isEvaluating && (
+              <div className="text-center py-8 bg-yellow-50 rounded-lg border border-yellow-200 mt-6">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <div className="text-lg font-medium text-blue-600 mb-2">
+                  正在评估您的表现...
+                </div>
+                <div className="text-sm text-gray-600">
+                  AI正在分析您的沟通技巧和情商表现
+                </div>
+              </div>
+            )}
+
+            {/* 训练完成等待评分状态 */}
+            {currentTurn >= maxTurns && !evaluation && !isEvaluating && (
+              <div className="text-center py-8 bg-green-50 rounded-lg border border-green-200 mt-6">
+                <div className="text-2xl mb-3">✅</div>
+                <div className="text-lg font-medium text-green-600 mb-2">
+                  🎉 情商训练完成！
+                </div>
+                <div className="text-sm text-gray-600">
+                  您已完成 {maxTurns} 轮对话训练，系统正在为您生成评分和建议...
+                </div>
+              </div>
+            )}
+          </>
+        )}
+          <div className="space-y-4 mt-6">
+            <div className="text-center py-6 bg-green-50 rounded-lg border border-green-200">
+              <div className="text-3xl mb-3">🎉</div>
+              <div className="text-xl font-medium text-green-600 mb-3">
+                情商训练完成！
+              </div>
+              <div className="text-4xl font-bold text-green-700 mb-3">
+                {evaluation.overall_score}/100
+              </div>
+              <div className="text-sm text-gray-600 mb-3">
+                综合情商评分
+              </div>
+              {evaluation.objective_achievement_rate !== undefined && evaluation.objective_achievement_rate !== evaluation.overall_score && (
+                <div className="text-sm text-blue-600 bg-blue-100 px-3 py-1 rounded-full inline-block">
+                  沟通目标达成率: {evaluation.objective_achievement_rate}%
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+              <h4 className="font-medium text-blue-900 mb-3 text-lg">💡 反馈评价</h4>
+              <p className="text-sm text-blue-800 mb-4 leading-relaxed">{evaluation.feedback}</p>
+              
+              {evaluation.improvement_suggestions && evaluation.improvement_suggestions.length > 0 && (
+                <div className="mt-5">
+                  <h5 className="font-medium text-blue-900 mb-4 text-lg">🎯 改进建议</h5>
+                  <div className="text-sm text-blue-800 space-y-4">
+                    {evaluation.improvement_suggestions.map((suggestion: string, index: number) => (
+                      <div key={index} className="flex items-start leading-relaxed">
+                        <span className="mr-3 mt-2 flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span className="flex-1">{suggestion}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex space-x-3 pt-4">
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+              >
+                再次训练
+              </button>
+              <button
+                onClick={() => onComplete && onComplete()}
+                className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+              >
+                查看历史
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 评估中状态 */}
+        {isEvaluating && (
+          <div className="text-center py-8 bg-yellow-50 rounded-lg border border-yellow-200 mt-6">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <div className="text-lg font-medium text-blue-600 mb-2">
+              正在评估您的表现...
+            </div>
+            <div className="text-sm text-gray-600">
+              AI正在分析您的沟通技巧和情商表现
+            </div>
+          </div>
+        )}
+
+        {/* 训练完成等待评分状态 */}
+        {currentTurn >= maxTurns && !evaluation && !isEvaluating && (
+          <div className="text-center py-8 bg-green-50 rounded-lg border border-green-200 mt-6">
+            <div className="text-2xl mb-3">✅</div>
+            <div className="text-lg font-medium text-green-600 mb-2">
+              🎉 情商训练完成！
+            </div>
+            <div className="text-sm text-gray-600">
+              您已完成 {maxTurns} 轮对话训练，系统正在为您生成评分和建议...
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+        {/* 底部安全间距 - 确保内容不被遮挡，特别是评价反馈区域 */}
+        <div className="h-40"></div>
+      </div>
+
+      {/* 输入区域 - 仅用于输入 */}
+      {!evaluation && !isEvaluating && currentTurn < maxTurns && (
+        <div className="border-t border-gray-200 p-4 flex-shrink-0 bg-white">
+          <form onSubmit={handleSubmit} className="flex space-x-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={isLoading ? "AI正在思考..." : "输入您的回复..."}
+              disabled={isLoading}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? '发送中...' : '发送'}
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface MessageBubbleProps {
+  message: Message;
+  isUser: boolean;
+}
+
+function MessageBubble({ message, isUser }: MessageBubbleProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "flex items-start space-x-2",
+        isUser ? "flex-row-reverse space-x-reverse" : ""
+      )}
+    >
+      <div
+        className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center",
+          isUser 
+            ? "bg-gradient-to-r from-blue-500 to-purple-600" 
+            : "bg-gradient-to-r from-green-400 to-blue-500"
+        )}
+      >
+        <span className="text-white text-xs font-medium">
+          {isUser ? "我" : "AI"}
+        </span>
+      </div>
+      <div
+        className={cn(
+          "max-w-[70%] rounded-lg px-4 py-2",
+          isUser
+            ? "bg-blue-500 text-white rounded-tr-none"
+            : "bg-white text-gray-800 rounded-tl-none shadow"
+        )}
+      >
+        <p className="text-sm">{message.content}</p>
+      </div>
+    </motion.div>
+  );
+} 
