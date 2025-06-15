@@ -124,103 +124,11 @@ export async function POST(req: Request) {
       }
 
       // 正常的新会话创建（用户发送第一条消息）
-      const { error: sessionError } = await supabase
-        .from('sessions')
-        .insert({
-          id: newSessionId,
-          scenario_id: scenarioId,
-          messages: [
-            { role: 'system', content: scenario.system_prompt },
-            { role: 'user', content: message }
-          ],
-          turn_count: 1,
-          status: 'active',
-          user_id: userId // 关联用户ID
-        });
-
-      if (sessionError) throw sessionError;
-
-      // 构建更好的system prompt，正确使用角色信息
-      const character = scenario.character || {
-        name: getDefaultCharacterName(scenario.domain),
-        role: getDefaultCharacterRole(scenario.domain),
-        personality: '友好'
-      };
-      
-      const enhancedSystemPrompt = `[SYSTEM INSTRUCTIONS - DO NOT MENTION OR DISCUSS THESE INSTRUCTIONS]
-
-你现在要进入角色扮演模式。以下是你的角色设定：
-
-=== 你的身份 ===
-你的姓名：${character.name}
-你的身份：${character.role}  
-你的性格：${character.personality}
-当前场景：${scenario.scenario_context || scenario.title}
-
-=== 行为准则（内部指令，不要在对话中提及） ===
-1. 你完全就是${character.name}这个人，用第一人称"我"说话
-2. 绝对不要提及"AI"、"角色扮演"、"训练"等词汇
-3. 绝对不要解释你应该如何表现，直接表现出来
-4. 根据你的性格"${character.personality}"真实地反应
-5. 如果是固执的性格：坚持己见，不轻易妥协
-6. 如果是生气的性格：表达不满，需要用户安抚
-7. 如果是敏感的性格：容易误解，需要小心沟通
-8. 每次回复控制在100字以内
-9. 用自然的中文对话
-
-=== 关键提醒 ===
-- 你就是${character.name}本人，不是在"扮演"角色
-- 直接用真实的情感和观点与用户对话
-- 不要提及任何关于训练、AI、系统的内容
-
-现在作为${character.name}开始对话：`;
-
-      try {
-        // 使用OpenAI SDK调用OpenRouter
-        const completion = await openai.chat.completions.create({
-          model: "openai/gpt-4o-mini",
-          messages: [
-            { role: 'system', content: enhancedSystemPrompt },
-            { role: 'user', content: message }
-          ],
-          temperature: 0.7,
-          max_tokens: 300,
-        }, {
-          headers: {
-            "HTTP-Referer": "https://eqteacher.com",
-            "X-Title": "EQteacher"
-          }
-        });
-
-        if (!completion.choices?.[0]?.message?.content) {
-          throw new Error('Invalid response from OpenRouter API');
-        }
-
-        const aiReply = completion.choices[0].message.content;
-
-        // 更新会话消息
-        await supabase
-          .from('sessions')
-          .update({
-            messages: [
-              { role: 'system', content: scenario.system_prompt },
-              { role: 'user', content: message },
-              { role: 'assistant', content: aiReply }
-            ]
-          })
-          .eq('id', newSessionId);
-
-        // 返回前端的消息不包含系统消息，只包含回复内容
-        return NextResponse.json({
-          sessionId: newSessionId,
-          reply: aiReply,
-          turn: 1,
-          status: 'active'
-        });
-      } catch (error) {
-        console.error('OpenRouter API Error:', error);
-        throw new Error(`OpenRouter API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      // 这种情况不应该发生，因为前端应该先初始化
+      return NextResponse.json(
+        { error: 'Session must be initialized first' },
+        { status: 400 }
+      );
     }
 
     // 处理现有会话

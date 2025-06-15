@@ -347,15 +347,16 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       
       if (!response.ok) {
         console.error('Evaluation error response:', data);
-        // 生成一个默认评估结果，即使API失败
+        // 生成一个更好的默认评估结果，即使API失败
         setEvaluation({
-          overall_score: 60,
-          objective_achievement_rate: 50,
-          feedback: "由于技术原因，无法获取详细评估。但您已完成对话练习，这是提升情商能力的重要一步！",
+          overall_score: 75,
+          objective_achievement_rate: 70,
+          feedback: "恭喜您完成了3轮情商对话训练！在这次练习中，您展现了基本的沟通技巧和情商意识。虽然评估系统暂时不可用，但您的参与本身就是提升情商能力的重要一步。",
           improvement_suggestions: [
-            "继续练习不同场景下的沟通技巧",
-            "关注对方的情绪和需求，调整自己的表达方式",
-            "尝试更多开放性问题，促进有效对话"
+            "继续练习不同场景下的沟通技巧，提升应变能力",
+            "多关注对方的情绪和需求，学会换位思考",
+            "尝试使用更多开放性问题，促进深度对话",
+            "在冲突情况下保持冷静，寻找双赢解决方案"
           ]
         });
         return;
@@ -383,7 +384,13 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !currentSessionId) return;
+    if (!input.trim() || isLoading) return;
+    
+    // 确保有sessionId，如果没有则不能发送消息
+    if (!currentSessionId) {
+      console.error('No session ID available');
+      return;
+    }
 
     const userMessage = input.trim();
     setInput('');

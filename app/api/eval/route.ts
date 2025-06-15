@@ -64,6 +64,8 @@ export async function POST(req: Request) {
       );
     }
 
+    console.log('Evaluating session:', sessionId);
+
     // 获取会话和场景信息
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
@@ -79,7 +81,16 @@ export async function POST(req: Request) {
       .eq('id', sessionId)
       .single();
 
-    if (sessionError || !session) {
+    if (sessionError) {
+      console.error('Session query error:', sessionError);
+      return NextResponse.json(
+        { error: 'Session not found', details: sessionError.message },
+        { status: 404 }
+      );
+    }
+
+    if (!session) {
+      console.error('Session not found for ID:', sessionId);
       return NextResponse.json(
         { error: 'Session not found' },
         { status: 404 }

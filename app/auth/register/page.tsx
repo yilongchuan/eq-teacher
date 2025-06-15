@@ -125,91 +125,99 @@ export default function RegisterPage() {
             <span>使用GitHub账号注册</span>
           </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">或使用邮箱注册</span>
-            </div>
+          {/* 邮箱注册暂时隐藏 */}
+          {false && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">或使用邮箱注册</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleEmailRegister} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    邮箱地址
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+                    显示名称
+                  </label>
+                  <Input
+                    id="displayName"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="您的昵称"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    密码
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="至少6位密码"
+                    required
+                    minLength={6}
+                    className="mt-1"
+                  />
+                </div>
+
+                {error && (
+                  <div className="text-red-500 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="text-green-500 text-sm">
+                    {successMessage}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? '注册中...' : '注册'}
+                </Button>
+              </form>
+            </>
+          )}
+        </div>
+
+        {/* 登录链接暂时隐藏 */}
+        {false && (
+          <div className="text-center mt-6">
+            <p className="text-sm text-gray-600">
+              已有账号?{' '}
+              <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-800">
+                立即登录
+              </Link>
+            </p>
           </div>
-
-          <form onSubmit={handleEmailRegister} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                邮箱地址
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
-                显示名称
-              </label>
-              <Input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="您的昵称"
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                密码
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="至少6位密码"
-                required
-                minLength={6}
-                className="mt-1"
-              />
-            </div>
-
-            {error && (
-              <div className="text-red-500 text-sm">
-                {error}
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="text-green-500 text-sm">
-                {successMessage}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2"
-              disabled={isLoading}
-            >
-              {isLoading ? '注册中...' : '注册'}
-            </Button>
-          </form>
-        </div>
-
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600">
-            已有账号?{' '}
-            <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-800">
-              立即登录
-            </Link>
-          </p>
-        </div>
+        )}
       </div>
     </div>
   )

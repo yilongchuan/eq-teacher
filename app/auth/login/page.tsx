@@ -110,75 +110,83 @@ export default function LoginPage() {
             <span>使用GitHub账号登录</span>
           </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">或使用邮箱登录</span>
-            </div>
+          {/* 邮箱登录暂时隐藏 */}
+          {false && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">或使用邮箱登录</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    邮箱地址
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      密码
+                    </label>
+                    <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+                      忘记密码?
+                    </Link>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="mt-1"
+                  />
+                </div>
+
+                {error && (
+                  <div className="text-red-500 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? '登录中...' : '登录'}
+                </Button>
+              </form>
+            </>
+          )}
+        </div>
+
+        {/* 注册链接暂时隐藏 */}
+        {false && (
+          <div className="text-center mt-6">
+            <p className="text-sm text-gray-600">
+              还没有账号?{' '}
+              <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-800">
+                注册账号
+              </Link>
+            </p>
           </div>
-
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                邮箱地址
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  密码
-                </label>
-                <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
-                  忘记密码?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="mt-1"
-              />
-            </div>
-
-            {error && (
-              <div className="text-red-500 text-sm">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2"
-              disabled={isLoading}
-            >
-              {isLoading ? '登录中...' : '登录'}
-            </Button>
-          </form>
-        </div>
-
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600">
-            还没有账号?{' '}
-            <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-800">
-              注册账号
-            </Link>
-          </p>
-        </div>
+        )}
       </div>
     </div>
   )
