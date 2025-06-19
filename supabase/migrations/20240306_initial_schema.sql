@@ -11,25 +11,28 @@ CREATE TABLE scenarios_dynamic (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Create sessions table
+-- Create sessions table (updated, single-table design)
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
-    scenario_id TEXT REFERENCES scenarios_dynamic(id),
-    messages JSONB NOT NULL,
-    turn INTEGER DEFAULT 0,
-    status TEXT NOT NULL CHECK (status IN ('idle', 'generating', 'active', 'grading', 'completed')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
-);
-
--- Create session_results table
-CREATE TABLE session_results (
-    session_id TEXT PRIMARY KEY REFERENCES sessions(id),
-    scores JSONB NOT NULL,
-    feedback TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+    scenario_id TEXT NOT NULL REFERENCES scenarios_dynamic(id),
+    messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+    turn_count INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'grading', 'paused')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    objective TEXT NULL,
+    objective_achievement_rate INTEGER NULL CHECK (objective_achievement_rate BETWEEN 0 AND 100),
+    overall_score INTEGER NULL CHECK (overall_score BETWEEN 0 AND 100),
+    detailed_scores JSONB NULL,
+    feedback TEXT NULL,
+    improvement_suggestions TEXT[] NULL,
+    evaluated_at TIMESTAMP WITH TIME ZONE NULL,
+    user_id UUID NULL REFERENCES auth.users(id),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT TIMEZONE('utc'::text, NOW())
 );
 
 -- Create indexes
 CREATE INDEX idx_scenarios_domain ON scenarios_dynamic(domain);
 CREATE INDEX idx_sessions_status ON sessions(status);
-CREATE INDEX idx_sessions_created_at ON sessions(created_at); 
+CREATE INDEX idx_sessions_created_at ON sessions(created_at);
+CREATE INDEX idx_sessions_evaluated_at ON sessions(evaluated_at);
+CREATE INDEX idx_sessions_overall_score ON sessions(overall_score); 

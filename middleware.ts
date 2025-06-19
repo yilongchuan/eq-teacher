@@ -104,7 +104,8 @@ export async function middleware(request: NextRequest) {
   const publicApiPaths = [
     '/api/scenarios',
     '/api/generate-initial-message',
-    '/api/chat'
+    '/api/chat',
+    '/api/eval'  // 添加评分API到公开路径
   ]
 
   const url = new URL(request.url)

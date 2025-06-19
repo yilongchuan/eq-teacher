@@ -44,26 +44,32 @@ export type Database = {
           turn_count: number
           status: string
           created_at: string
-          updated_at: string
-          user_id: string | null
-          overall_score: number | null
+          objective: string | null
           objective_achievement_rate: number | null
-          feedback: string[] | null
+          overall_score: number | null
+          detailed_scores: Record<string, number> | null
+          feedback: string | null
           improvement_suggestions: string[] | null
+          evaluated_at: string | null
+          user_id: string | null
+          updated_at: string
         }
         Insert: {
           id: string
           scenario_id: string
-          messages: any[]
-          turn_count: number
-          status: string
+          messages?: any[]
+          turn_count?: number
+          status?: string
           created_at?: string
-          updated_at?: string
-          user_id?: string | null
-          overall_score?: number | null
+          objective?: string | null
           objective_achievement_rate?: number | null
-          feedback?: string[] | null
+          overall_score?: number | null
+          detailed_scores?: Record<string, number> | null
+          feedback?: string | null
           improvement_suggestions?: string[] | null
+          evaluated_at?: string | null
+          user_id?: string | null
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -72,12 +78,15 @@ export type Database = {
           turn_count?: number
           status?: string
           created_at?: string
-          updated_at?: string
-          user_id?: string | null
-          overall_score?: number | null
+          objective?: string | null
           objective_achievement_rate?: number | null
-          feedback?: string[] | null
+          overall_score?: number | null
+          detailed_scores?: Record<string, number> | null
+          feedback?: string | null
           improvement_suggestions?: string[] | null
+          evaluated_at?: string | null
+          user_id?: string | null
+          updated_at?: string
         }
       }
       scenarios_dynamic: {

@@ -152,6 +152,7 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       console.log('Generated initial message:', initialMessage);
       
       // 创建会话
+      console.log('🚀 创建新会话: scenarioId =', scenarioId);
       const sessionResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -164,10 +165,17 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       });
 
       if (!sessionResponse.ok) {
+        console.error('❌ 创建会话失败:', await sessionResponse.text());
         throw new Error('Failed to create session');
       }
 
       const sessionData = await sessionResponse.json();
+      if (!sessionData.sessionId) {
+        console.error('❌ 会话创建响应中缺少sessionId:', sessionData);
+        throw new Error('Invalid session data - missing sessionId');
+      }
+      
+      console.log('✅ 会话创建成功, ID:', sessionData.sessionId);
       setCurrentSessionId(sessionData.sessionId);
       
       // 设置消息：AI的开场白 (确保只有助手消息，没有系统消息)
@@ -335,38 +343,100 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
 
   const evaluateSession = async (sessionId: string) => {
     try {
+      console.log('🔄 开始评估会话:', sessionId);
       setIsEvaluating(true);
+      
+      // 预先设置默认评估，以防后续处理出错
+      const defaultEvaluation = {
+        overall_score: 75,
+        objective_achievement_rate: 70,
+        feedback: "恭喜您完成了3轮情商对话训练！在这次练习中，您展现了基本的沟通技巧和情商意识。虽然评估系统暂时不可用，但您的参与本身就是提升情商能力的重要一步。",
+        improvement_suggestions: [
+          "继续练习不同场景下的沟通技巧，提升应变能力",
+          "多关注对方的情绪和需求，学会换位思考",
+          "尝试使用更多开放性问题，促进深度对话",
+          "在冲突情况下保持冷静，寻找双赢解决方案"
+        ]
+      };
+      
+      // 检查sessionId是否有效
+      if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+        console.error('❌ 会话ID无效:', sessionId);
+        setEvaluation(defaultEvaluation);
+        return;
+      }
+      
+      // 确保sessionId是干净的
+      const cleanSessionId = sessionId.trim();
+      
       // 使用带重试功能的fetch
+      console.log('🚀 发送评估请求...会话ID:', cleanSessionId);
       const response = await fetchWithRetry('/api/eval', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId: cleanSessionId }),
       }, 2, 1500); // 2次重试，初始延迟1.5秒
       
-      const data = await response.json();
+      console.log('📥 收到API响应, 状态:', response.status);
+      
+      // 如果是404错误，说明会话不存在
+      if (response.status === 404) {
+        console.error('❌ 会话不存在:', sessionId);
+        setEvaluation({
+          ...defaultEvaluation,
+          feedback: "无法找到该会话记录，可能已被删除或ID无效。已生成默认评估结果。"
+        });
+        return;
+      }
+      
+      // 安全解析响应数据
+      let data = {};
+      try {
+        data = await response.json();
+        console.log('📦 API响应数据:', data);
+      } catch (parseError) {
+        console.error('❌ JSON解析错误:', parseError);
+        setEvaluation(defaultEvaluation);
+        return;
+      }
       
       if (!response.ok) {
-        console.error('Evaluation error response:', data);
-        // 生成一个更好的默认评估结果，即使API失败
+        console.error('❌ 评估错误响应:', data);
+        
+        // 即使API失败了但返回了默认评估结果，也使用它
+        if (data && typeof data === 'object' && 'evaluation' in data && data.evaluation) {
+          console.log('✅ 使用API返回的默认评估结果');
+          setEvaluation(data.evaluation);
+        } else {
+          // 使用默认评估
+          console.log('⚠️ 生成前端默认评估结果');
+          setEvaluation(defaultEvaluation);
+        }
+        return;
+      }
+      
+      // 检查数据格式，确保有evaluation字段
+      if (!data || typeof data !== 'object' || !('evaluation' in data) || !data.evaluation) {
+        console.error('❌ 无效的评估数据格式:', data);
         setEvaluation({
-          overall_score: 75,
-          objective_achievement_rate: 70,
-          feedback: "恭喜您完成了3轮情商对话训练！在这次练习中，您展现了基本的沟通技巧和情商意识。虽然评估系统暂时不可用，但您的参与本身就是提升情商能力的重要一步。",
+          overall_score: 70,
+          objective_achievement_rate: 65,
+          feedback: "由于数据格式问题，无法获取详细评估。但您已完成对话练习！",
           improvement_suggestions: [
-            "继续练习不同场景下的沟通技巧，提升应变能力",
-            "多关注对方的情绪和需求，学会换位思考",
-            "尝试使用更多开放性问题，促进深度对话",
-            "在冲突情况下保持冷静，寻找双赢解决方案"
+            "继续练习不同情境下的沟通技巧", 
+            "关注对方情绪和需求"
           ]
         });
         return;
       }
       
       // 正常情况，设置API返回的评估结果
+      console.log('✅ 成功获取评估结果');
       setEvaluation(data.evaluation);
     } catch (error) {
-      console.error('Error evaluating session:', error);
+      console.error('❌ 评估过程出错:', error);
       // 异常情况下也生成默认评估
+      console.log('⚠️ 异常情况，生成默认评估');
       setEvaluation({
         overall_score: 60,
         objective_achievement_rate: 50,
@@ -378,6 +448,7 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
         ]
       });
     } finally {
+      console.log('🏁 评估过程结束');
       setIsEvaluating(false);
     }
   };
@@ -430,30 +501,48 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       const newTurn = currentTurn + 1;
       setCurrentTurn(newTurn);
       
-      // 检查是否达到最大轮次
-      if (newTurn >= maxTurns) {
-        // 开始评估，设置更长的延迟，确保数据已经完全保存
-        setTimeout(() => {
-          evaluateSession(currentSessionId);
-        }, 1500);
+          // 检查是否达到最大轮次
+    if (newTurn >= maxTurns) {
+      // 开始评估，设置更长的延迟，确保数据已经完全保存
+      setTimeout(() => {
+        // 调试：记录当前会话ID
+        console.log('🔍 准备评估会话ID:', currentSessionId, '类型:', typeof currentSessionId);
         
-        // 设置30秒后的兜底评估结果，以防评估API长时间未响应
-        setTimeout(() => {
-          if (isEvaluating) {
-            console.log('评估超时，显示默认结果');
-            setIsEvaluating(false);
-            setEvaluation({
-              overall_score: 65,
-              objective_achievement_rate: 60,
-              feedback: "您已完成对话练习！在这次练习中，您展现了基本的沟通技巧。继续练习可以进一步提升您的情商表现。",
-              improvement_suggestions: [
-                "尝试更多地站在对方角度思考问题",
-                "使用开放性问题鼓励对方表达想法",
-                "注意倾听并表达理解对方的情感需求"
-              ]
-            });
-          }
-        }, 30000);
+        // 检查会话ID是否有效
+        if (!currentSessionId) {
+          console.error('❌ 无效的会话ID，无法评估');
+          setEvaluation({
+            overall_score: 70,
+            objective_achievement_rate: 65,
+            feedback: "由于会话ID无效，无法进行详细评估。但您已完成对话练习！",
+            improvement_suggestions: [
+              "尝试开始一个新的对话练习", 
+              "确保会话完整进行"
+            ]
+          });
+          return;
+        }
+        
+        evaluateSession(currentSessionId);
+      }, 1500);
+      
+      // 设置30秒后的兜底评估结果，以防评估API长时间未响应
+      setTimeout(() => {
+        if (isEvaluating) {
+          console.log('评估超时，显示默认结果');
+          setIsEvaluating(false);
+          setEvaluation({
+            overall_score: 65,
+            objective_achievement_rate: 60,
+            feedback: "您已完成对话练习！在这次练习中，您展现了基本的沟通技巧。继续练习可以进一步提升您的情商表现。",
+            improvement_suggestions: [
+              "尝试更多地站在对方角度思考问题",
+              "使用开放性问题鼓励对方表达想法",
+              "注意倾听并表达理解对方的情感需求"
+            ]
+          });
+        }
+      }, 30000);
       }
     } catch (error) {
       console.error('Error sending message:', error);

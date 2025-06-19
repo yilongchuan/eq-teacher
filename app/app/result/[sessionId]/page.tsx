@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Download, RotateCcw, Share2, TrendingUp, MessageCircle } from "lucide-react"
+import { Download, RotateCcw, Share2, TrendingUp, MessageCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useToast } from "@/components/ui/use-toast"
 
 const scoreData = {
   overall: 87,
@@ -37,34 +38,118 @@ const scoreData = {
 export default function ResultPage({ params }: { params: { sessionId: string } }) {
   const [animatedScore, setAnimatedScore] = useState(0)
   const [comicLoaded, setComicLoaded] = useState(false)
-
-  // Animate score from 0 to final value
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      let current = 0
-      const increment = scoreData.overall / 50 // 50 steps for smooth animation
-      const interval = setInterval(() => {
-        current += increment
-        if (current >= scoreData.overall) {
-          setAnimatedScore(scoreData.overall)
-          clearInterval(interval)
-        } else {
-          setAnimatedScore(Math.floor(current))
+  const [sessionData, setSessionData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [isRevaluating, setIsRevaluating] = useState(false)
+  const { toast } = useToast()
+  
+  const fetchSessionData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/sessions/${params.sessionId}`)
+      if (!response.ok) throw new Error('Failed to fetch session')
+      const data = await response.json()
+      setSessionData(data)
+      setAnimatedScore(0) // 重置动画
+      
+      // 延迟一下再开始分数动画
+      setTimeout(() => {
+        if (data.overall_score) {
+          let current = 0
+          const increment = data.overall_score / 50 // 50 steps for smooth animation
+          const interval = setInterval(() => {
+            current += increment
+            if (current >= data.overall_score) {
+              setAnimatedScore(data.overall_score)
+              clearInterval(interval)
+            } else {
+              setAnimatedScore(Math.floor(current))
+            }
+          }, 20)
         }
-      }, 20)
-      return () => clearInterval(interval)
-    }, 500)
-
-    // Simulate comic loading
+      }, 500)
+      
+    } catch (error) {
+      console.error('Error fetching session:', error)
+      toast({
+        title: "Error",
+        description: "Could not load session data",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleRevaluate = async () => {
+    try {
+      setIsRevaluating(true)
+      toast({
+        title: "重新评估中",
+        description: "正在重新评估您的对话...",
+      })
+      
+      const response = await fetch('/api/eval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: params.sessionId }),
+      })
+      
+      if (!response.ok) throw new Error('Failed to revaluate')
+      
+      // 重新获取会话数据以显示新评分
+      await fetchSessionData()
+      
+      toast({
+        title: "评估完成",
+        description: "您的对话已被重新评估",
+        variant: "default"
+      })
+    } catch (error) {
+      console.error('Error revaluating:', error)
+      toast({
+        title: "评估失败",
+        description: "无法重新评估对话，请稍后再试",
+        variant: "destructive"
+      })
+    } finally {
+      setIsRevaluating(false)
+    }
+  }
+  
+  // 初始加载数据
+  useEffect(() => {
+    fetchSessionData()
+    
+    // 模拟漫画加载
     const comicTimer = setTimeout(() => {
       setComicLoaded(true)
     }, 2000)
-
+    
     return () => {
-      clearTimeout(timer)
       clearTimeout(comicTimer)
     }
-  }, [])
+  }, [params.sessionId])
+
+  // 使用实际数据或者默认数据
+  const scoreData = sessionData ? {
+    overall: sessionData.overall_score || 75,
+    dimensions: sessionData.detailed_scores ? 
+      Object.entries(sessionData.detailed_scores).map(([name, score]) => ({
+        name,
+        score: Number(score),
+        description: `Your ${name.toLowerCase()} skills and abilities`
+      })) : [],
+    improvements: sessionData.improvement_suggestions ?
+      sessionData.improvement_suggestions.map((suggestion: string) => ({
+        title: suggestion,
+        template: suggestion
+      })) : []
+  } : {
+    overall: 75,
+    dimensions: [],
+    improvements: []
+  }
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return "text-green-600"
@@ -201,7 +286,7 @@ export default function ResultPage({ params }: { params: { sessionId: string } }
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {scoreData.improvements.map((improvement, index) => (
+              {scoreData.improvements.map((improvement: { title: string, template: string }, index: number) => (
                 <motion.div
                   key={index}
                   className="p-4 bg-slate-50 rounded-lg space-y-2"
@@ -292,9 +377,14 @@ export default function ResultPage({ params }: { params: { sessionId: string } }
               Back to Dashboard
             </Button>
           </Link>
-          <Button variant="outline" size="lg">
-            <Share2 className="w-5 h-5 mr-2" />
-            Share Results
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={handleRevaluate}
+            disabled={isRevaluating}
+          >
+            <RefreshCw className={`w-5 h-5 mr-2 ${isRevaluating ? 'animate-spin' : ''}`} />
+            重新评分
           </Button>
         </motion.div>
       </div>
