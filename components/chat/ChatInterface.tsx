@@ -45,6 +45,7 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
   const [maxTurns] = useState(3);
   const [evaluation, setEvaluation] = useState<any>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 获取场景信息并初始化对话
@@ -342,27 +343,17 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
   };
 
   const evaluateSession = async (sessionId: string) => {
+    // 重新开始评估前，清空错误
+    setEvaluationError(null);
     try {
       console.log('🔄 开始评估会话:', sessionId);
       setIsEvaluating(true);
       
-      // 预先设置默认评估，以防后续处理出错
-      const defaultEvaluation = {
-        overall_score: 75,
-        objective_achievement_rate: 70,
-        feedback: "恭喜您完成了3轮情商对话训练！在这次练习中，您展现了基本的沟通技巧和情商意识。虽然评估系统暂时不可用，但您的参与本身就是提升情商能力的重要一步。",
-        improvement_suggestions: [
-          "继续练习不同场景下的沟通技巧，提升应变能力",
-          "多关注对方的情绪和需求，学会换位思考",
-          "尝试使用更多开放性问题，促进深度对话",
-          "在冲突情况下保持冷静，寻找双赢解决方案"
-        ]
-      };
-      
       // 检查sessionId是否有效
       if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
         console.error('❌ 会话ID无效:', sessionId);
-        setEvaluation(defaultEvaluation);
+        setEvaluation(null);
+        setEvaluationError('会话ID无效，无法进行评分');
         return;
       }
       
@@ -382,10 +373,8 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       // 如果是404错误，说明会话不存在
       if (response.status === 404) {
         console.error('❌ 会话不存在:', sessionId);
-        setEvaluation({
-          ...defaultEvaluation,
-          feedback: "无法找到该会话记录，可能已被删除或ID无效。已生成默认评估结果。"
-        });
+        setEvaluation(null);
+        setEvaluationError('未找到会话记录，无法评分');
         return;
       }
       
@@ -396,57 +385,34 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
         console.log('📦 API响应数据:', data);
       } catch (parseError) {
         console.error('❌ JSON解析错误:', parseError);
-        setEvaluation(defaultEvaluation);
+        setEvaluation(null);
+        setEvaluationError('评分数据格式异常，稍后重试');
         return;
       }
       
       if (!response.ok) {
         console.error('❌ 评估错误响应:', data);
-        
-        // 即使API失败了但返回了默认评估结果，也使用它
-        if (data && typeof data === 'object' && 'evaluation' in data && data.evaluation) {
-          console.log('✅ 使用API返回的默认评估结果');
-          setEvaluation(data.evaluation);
-        } else {
-          // 使用默认评估
-          console.log('⚠️ 生成前端默认评估结果');
-          setEvaluation(defaultEvaluation);
-        }
+        setEvaluation(null);
+        setEvaluationError('评分接口返回错误，请稍后重试');
         return;
       }
       
       // 检查数据格式，确保有evaluation字段
       if (!data || typeof data !== 'object' || !('evaluation' in data) || !data.evaluation) {
         console.error('❌ 无效的评估数据格式:', data);
-        setEvaluation({
-          overall_score: 70,
-          objective_achievement_rate: 65,
-          feedback: "由于数据格式问题，无法获取详细评估。但您已完成对话练习！",
-          improvement_suggestions: [
-            "继续练习不同情境下的沟通技巧", 
-            "关注对方情绪和需求"
-          ]
-        });
+        setEvaluation(null);
+        setEvaluationError('评分数据格式异常，稍后重试');
         return;
       }
       
       // 正常情况，设置API返回的评估结果
       console.log('✅ 成功获取评估结果');
       setEvaluation(data.evaluation);
+      setEvaluationError(null);
     } catch (error) {
       console.error('❌ 评估过程出错:', error);
-      // 异常情况下也生成默认评估
-      console.log('⚠️ 异常情况，生成默认评估');
-      setEvaluation({
-        overall_score: 60,
-        objective_achievement_rate: 50,
-        feedback: "由于技术原因，无法获取详细评估。但您已完成对话练习，这是提升情商能力的重要一步！",
-        improvement_suggestions: [
-          "继续练习不同场景下的沟通技巧",
-          "关注对方的情绪和需求，调整自己的表达方式",
-          "尝试更多开放性问题，促进有效对话"
-        ]
-      });
+      setEvaluation(null);
+      setEvaluationError('评分过程中出现异常，请稍后再试');
     } finally {
       console.log('🏁 评估过程结束');
       setIsEvaluating(false);
@@ -681,9 +647,6 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
                 <div className="text-sm text-gray-600">
                   AI正在分析您的沟通技巧和情商表现
                 </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  (若评估时间较长，系统会自动提供默认评估)
-                </div>
               </div>
             )}
 
@@ -700,7 +663,7 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
               </div>
             )}
             
-            {/* 评分结果区域 - 作为对话的最后部分显示 */}
+            {/* 评分结果 */}
             {evaluation && (
               <div className="space-y-4 mt-6" id="evaluation-result">
                 {/* 滚动指示器 */}
@@ -767,6 +730,24 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
                     className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
                   >
                     查看历史
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 评分错误区域 */}
+            {!evaluation && evaluationError && (
+              <div className="space-y-4 mt-6" id="evaluation-error">
+                <div className="bg-red-50 rounded-lg p-6 border border-red-200 text-center">
+                  <div className="text-2xl mb-3">❌</div>
+                  <div className="text-lg font-medium text-red-600 mb-2">评分失败</div>
+                  <div className="text-sm text-red-600 mb-4">{evaluationError}</div>
+                  <button
+                    disabled={isEvaluating}
+                    onClick={() => currentSessionId && evaluateSession(currentSessionId)}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    {isEvaluating ? '重新评分中...' : '重新尝试评分'}
                   </button>
                 </div>
               </div>
