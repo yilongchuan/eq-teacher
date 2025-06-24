@@ -2,8 +2,15 @@
 
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 export function CTABanner() {
+  const router = useRouter()
+
+  const handleStartPractice = () => {
+    router.push('/app/play')
+  }
+
   return (
     <section className="py-20 px-4">
       <div className="container mx-auto">
@@ -23,6 +30,7 @@ export function CTABanner() {
           <Button
             size="lg"
             className="bg-white text-indigo-600 hover:bg-slate-50 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 px-8 py-4 text-lg font-semibold"
+            onClick={handleStartPractice}
           >
             Start Free Practice
           </Button>

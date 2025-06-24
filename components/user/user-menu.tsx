@@ -108,9 +108,6 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/profile">个人资料</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/history">对话历史</Link>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-red-500">
           退出登录

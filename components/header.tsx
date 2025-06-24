@@ -47,12 +47,12 @@ export function Header() {
           <a href="#faq" className="text-slate-700 hover:text-indigo-600 transition-colors">
             常见问题
           </a>
-          <Link href="/play" className="text-slate-700 hover:text-indigo-600 transition-colors">
+          <Link href="/app/play" className="text-slate-700 hover:text-indigo-600 transition-colors">
             开始练习
           </Link>
-          <Link href="/history" className="text-slate-700 hover:text-indigo-600 transition-colors">
+          {/* <Link href="/history" className="text-slate-700 hover:text-indigo-600 transition-colors">
             历史记录
-          </Link>
+          </Link> */}
         </nav>
 
         {/* Right side */}
