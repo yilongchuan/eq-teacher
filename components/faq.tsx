@@ -10,11 +10,6 @@ const faqs = [
       "Our AI uses Claude-powered natural language processing to analyze your responses across multiple dimensions including empathy, clarity, assertiveness, and emotional intelligence. The scoring is based on established psychological frameworks and communication best practices.",
   },
   {
-    question: "Can I cancel anytime?",
-    answer:
-      "You can cancel your subscription at any time with no questions asked. Your access will continue until the end of your current billing period, and you can always restart your subscription later.",
-  },
-  {
     question: "Is my data private?",
     answer:
       "Yes, your privacy is our top priority. All conversations are encrypted, never shared with third parties, and you can delete your data at any time. We comply with GDPR, CCPA, and other major privacy regulations.",

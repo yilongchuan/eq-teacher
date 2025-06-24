@@ -4,7 +4,7 @@ import { Header } from "@/components/header"
 import { Hero } from "@/components/hero"
 import { Features } from "@/components/features"
 import { CTABanner } from "@/components/cta-banner"
-import { Pricing } from "@/components/pricing"
+// import { Pricing } from "@/components/pricing"
 import { FAQ } from "@/components/faq"
 import { Footer } from "@/components/footer"
 
@@ -16,7 +16,7 @@ export default function LandingPage() {
         <Hero />
         <Features />
         <CTABanner />
-        <Pricing />
+        {/* <Pricing /> */}
         <FAQ />
       </main>
       <Footer />

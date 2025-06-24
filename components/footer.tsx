@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 const footerLinks = {
-  Product: ["Features", "Pricing", "API", "Changelog"],
+  Product: ["Features", /* "Pricing", */ "API", "Changelog"],
   Resources: ["Blog", "Documentation", "Help Center", "Community"],
   Legal: ["Privacy Policy", "Terms of Service", "Cookie Policy", "GDPR"],
   Social: ["Twitter", "LinkedIn", "GitHub", "Discord"],

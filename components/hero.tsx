@@ -82,10 +82,10 @@ export function Hero() {
                 <Award className="w-4 h-4 text-amber-500" />
                 <span>Product Hunt #1 Product of the Day</span>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-slate-600">
+              {/* <div className="flex items-center space-x-2 text-sm text-slate-600">
                 <Shield className="w-4 h-4 text-indigo-500" />
                 <span>Stripe Verified Partner</span>
-              </div>
+              </div> */}
             </motion.div>
           </motion.div>
 

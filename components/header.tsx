@@ -44,9 +44,6 @@ export function Header() {
           <a href="#features" className="text-slate-700 hover:text-indigo-600 transition-colors">
             功能
           </a>
-          <a href="#pricing" className="text-slate-700 hover:text-indigo-600 transition-colors">
-            价格
-          </a>
           <a href="#faq" className="text-slate-700 hover:text-indigo-600 transition-colors">
             常见问题
           </a>

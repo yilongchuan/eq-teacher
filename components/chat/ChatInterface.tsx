@@ -48,27 +48,45 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 获取场景信息并初始化对话
+  // 获取场景信息并初始化对话（带 localStorage 去重）
   useEffect(() => {
-    let isActive = true; // 用于防止重复初始化
-    
+    let isActive = true;
+
     const initialize = async () => {
+      // 1. 若 props.sessionId 直接传入，优先使用
       if (sessionId) {
-        // 加载已有会话
         await fetchSession(sessionId);
-      } else if (scenarioId) {
-        // 新场景，获取场景信息并初始化对话
+        return;
+      }
+
+      // 2. 检查本地是否缓存了未完成的 sessionId
+      const storedId = typeof window !== 'undefined'
+        ? localStorage.getItem(`session_${scenarioId}`)
+        : null;
+
+      if (storedId && storedId !== 'PENDING') {
+        await fetchSession(storedId);
+        return;
+      }
+
+      if (storedId === 'PENDING') {
+        // 另一个挂载正在创建，会在完成后更新 localStorage；此处先等待用户刷新
+        console.log('Session creation in progress, skipping duplicate initialization');
+        return;
+      }
+
+      // 3. 创建全新会话（加 PENDING 标记防止并发重复创建）
+      if (scenarioId) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`session_${scenarioId}`, 'PENDING');
+        }
         await initializeScenario();
       }
-    }
-    
-    if (isActive) {
-      initialize();
-    }
-    
-    return () => {
-      isActive = false; // 清理函数
     };
+
+    if (isActive) initialize();
+
+    return () => { isActive = false; };
   }, [sessionId, scenarioId]);
 
   const fetchSession = async (sessionId: string) => {
@@ -103,6 +121,11 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
           const scenarioData = await scenarioResponse.json();
           setScenario(scenarioData);
         }
+      }
+
+      // 写入缓存，防止重复创建
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`session_${scenarioId}`, sessionId);
       }
     } catch (error) {
       console.error('Error fetching session:', error);
@@ -186,6 +209,11 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       console.log('Initial message set:', initialMessage);
       // AI的开场白不算轮次，从0开始
       setCurrentTurn(0);
+
+      // 写入缓存，防止重复创建
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`session_${scenarioId}`, sessionData.sessionId);
+      }
     } catch (error) {
       console.error('Error initializing scenario:', error);
       // 如果初始化失败，使用默认消息
@@ -409,6 +437,11 @@ export function ChatInterface({ scenarioId, sessionId, onComplete }: ChatInterfa
       console.log('✅ 成功获取评估结果');
       setEvaluation(data.evaluation);
       setEvaluationError(null);
+
+      // 评分成功后可视为会话结束，清理缓存，防止再次进入相同 session
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`session_${scenarioId}`);
+      }
     } catch (error) {
       console.error('❌ 评估过程出错:', error);
       setEvaluation(null);

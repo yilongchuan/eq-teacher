@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         },
       }
     )
-
+    
     // 先检查会话是否存在
     const { data: sessionExists, error: existsError } = await supabase
       .from('sessions')
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       
     console.log('🔄 会话存在检查结果:', sessionExists ? '存在' : '不存在', '错误:', existsError ? existsError.message : '无');
       
-    if (existsError) {
+          if (existsError) {
       console.error('Error checking session existence:', existsError);
       return NextResponse.json(
         { error: 'Error checking session', details: existsError.message },

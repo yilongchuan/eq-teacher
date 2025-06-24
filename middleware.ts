@@ -115,6 +115,11 @@ export async function middleware(request: NextRequest) {
   const isPublicApiPath = publicApiPaths.some(path => url.pathname.startsWith(path))
   const isAuthPath = url.pathname.startsWith('/auth')
 
+  // 暂时隐藏定价页面 - 重定向到主页
+  if (url.pathname.startsWith('/pricing')) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
   // 对于API路径，如果是公开API则不需要认证检查
   if (isApiPath && isPublicApiPath) {
     return response;
