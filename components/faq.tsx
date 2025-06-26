@@ -5,19 +5,19 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 const faqs = [
   {
-    question: "How does the AI grade me?",
+    question: "AI是如何给我评分的？",
     answer:
-      "Our AI uses Claude-powered natural language processing to analyze your responses across multiple dimensions including empathy, clarity, assertiveness, and emotional intelligence. The scoring is based on established psychological frameworks and communication best practices.",
+      "我们的AI使用ChatGPT最新模型，从同理心、清晰度、自信等多个维度分析你的回应。评分基于成熟的心理学框架和沟通最佳实践。",
   },
   {
-    question: "Is my data private?",
+    question: "我的数据隐私安全吗？",
     answer:
-      "Yes, your privacy is our top priority. All conversations are encrypted, never shared with third parties, and you can delete your data at any time. We comply with GDPR, CCPA, and other major privacy regulations.",
+      "是的，隐私保护是我们的首要任务。所有对话都经过加密处理，从不与第三方共享，你可以随时删除自己的数据。我们遵循GDPR、CCPA等主要隐私法规。",
   },
   {
-    question: "Do you support other languages?",
+    question: "支持其他语言吗？",
     answer:
-      "Currently we support English and Spanish, with more languages coming soon. Our AI can understand context and cultural nuances in both languages to provide accurate feedback.",
+      "目前暂时支持中文，后面会扩展其他语言。我们的AI能够理解语境和文化差异，为不同语言用户提供准确的反馈。",
   },
 ]
 
@@ -33,9 +33,9 @@ export function FAQ() {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl font-bold text-slate-900 mb-4" style={{ fontFamily: "Inter Tight, sans-serif" }}>
-            Frequently Asked Questions
+            常见问题
           </h2>
-          <p className="text-xl text-slate-600">Everything you need to know about EQteacher</p>
+          <p className="text-xl text-slate-600">关于EQteacher你需要了解的一切</p>
         </motion.div>
 
         <motion.div

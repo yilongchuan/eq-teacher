@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 const footerLinks = {
-  Product: ["Features", /* "Pricing", */ "API", "Changelog"],
-  Resources: ["Blog", "Documentation", "Help Center", "Community"],
-  Legal: ["Privacy Policy", "Terms of Service", "Cookie Policy", "GDPR"],
-  Social: ["Twitter", "LinkedIn", "GitHub", "Discord"],
+  产品: ["功能特性", /* "价格", */ "API", "更新日志"],
+  资源: ["博客", "文档", "帮助中心", "社区"],
+  法律: ["隐私政策", "服务条款", "Cookie政策", "GDPR"],
+  社交: ["Twitter", "LinkedIn", "GitHub", "Discord"],
 }
 
 export function Footer() {
@@ -24,15 +24,15 @@ export function Footer() {
               <span className="font-bold text-white text-lg">EQteacher</span>
             </div>
             <p className="text-slate-400 max-w-md">
-              Master crucial conversations with AI-powered emotional intelligence training. Practice anywhere, anytime.
+              通过AI驱动的情商训练，掌握关键对话技巧。随时随地练习沟通技能。
             </p>
 
             {/* Newsletter */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-white">Stay updated</h4>
+              <h4 className="font-semibold text-white">保持更新</h4>
               <div className="flex space-x-2">
                 <Input
-                  placeholder="Enter your email"
+                  placeholder="输入你的邮箱"
                   className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
                 />
                 <Button className="bg-indigo-600 hover:bg-indigo-700">
@@ -62,9 +62,9 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-1 text-slate-400">
-            <span>© 2025 EQteacher. Made with</span>
+            <span>© 2025 EQteacher. 用</span>
             <Heart className="w-4 h-4 text-red-500" />
-            <span>in NYC</span>
+            <span>制作于北京</span>
           </div>
 
           <div className="flex items-center space-x-4">

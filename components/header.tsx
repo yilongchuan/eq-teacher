@@ -57,21 +57,6 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center space-x-4">
-          {/* Language Switcher */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-slate-700">
-                <Globe className="w-4 h-4 mr-1" />
-                中文
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>中文</DropdownMenuItem>
-              <DropdownMenuItem>English</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* User Menu */}
           <UserMenu />
         </div>

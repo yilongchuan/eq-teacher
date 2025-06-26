@@ -6,18 +6,18 @@ import { Wand2, Gauge, PanelsTopLeft } from "lucide-react"
 const features = [
   {
     icon: Wand2,
-    title: "Dynamic Scenarios",
-    description: "From salary talks to small talk—generate tailor-made scripts in a tap.",
+    title: "动态场景生成",
+    description: "从薪资谈判到日常闲聊——一键生成量身定制的对话剧本。",
   },
   {
     icon: Gauge,
-    title: "Real-Time Scoring",
-    description: "Claude-powered rubric grades empathy, clarity, assertiveness within 10s.",
+    title: "AI实时评分",
+    description: "使用ChatGPT先进模型，在10秒内从同理心、清晰度、自信等维度评估你的表现。",
   },
   {
     icon: PanelsTopLeft,
-    title: "Shareable Comics",
-    description: "Turn your best moves into four-panel comics and flex on LinkedIn or IG.",
+    title: "对话分析报告", 
+    description: "获得详细的表现分析和改进建议，帮你持续提升沟通技巧。",
   },
 ]
 
@@ -33,10 +33,10 @@ export function Features() {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl font-bold text-slate-900 mb-4" style={{ fontFamily: "Inter Tight, sans-serif" }}>
-            Everything you need to level up your EQ
+            提升情商沟通的完整工具
           </h2>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Practice real conversations with AI that understands context, emotion, and social dynamics.
+            通过AI驱动的角色扮演，在真实情境中练习沟通技巧。理解语境、情绪和社交动态。
           </p>
         </motion.div>
 
