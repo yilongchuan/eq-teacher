@@ -259,7 +259,7 @@ export async function POST(req: Request) {
     try {
       // 使用OpenAI SDK调用OpenRouter
       const completion = await openai.chat.completions.create({
-        model: "anthropic/claude-3.5-haiku",
+        model: "qwen/qwen-2.5-72b-instruct",
         messages: openRouterMessages as any,
         temperature: 0.7,
         max_tokens: 400, // 增加token限制，Haiku处理能力更强

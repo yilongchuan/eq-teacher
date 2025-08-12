@@ -151,7 +151,7 @@ export async function POST(req: Request) {
     try {
       // 使用OpenAI SDK调用OpenRouter生成场景
       const completion = await openai.chat.completions.create({
-        model: "anthropic/claude-3.5-haiku",
+        model: "qwen/qwen-2.5-72b-instruct",
         messages: [
           {
             role: 'user',

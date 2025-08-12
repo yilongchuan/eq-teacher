@@ -228,7 +228,7 @@ ${scenarioData.rubric.map((item: any, index: number) =>
       // 使用OpenAI SDK调用OpenRouter进行评估，添加超时控制
       console.log('🚀 开始调用OpenRouter API评估对话');
       const completionPromise = openai.chat.completions.create({
-        model: "anthropic/claude-3.5-haiku",
+        model: "qwen/qwen-2.5-72b-instruct",
         messages: [
           {
             role: 'user',
