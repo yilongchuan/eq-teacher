@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     try {
       // 使用OpenAI SDK调用OpenRouter生成个性化的开场白
       const completion = await openai.chat.completions.create({
-        model: "qwen/qwen-2.5-72b-instruct",
+        model: "openai/gpt-4o-mini",
         messages: [
           {
             role: 'system',
@@ -70,8 +70,8 @@ export async function POST(req: Request) {
             content: '请开始对话。'
           }
         ],
-        temperature: 0.7,
-        max_tokens: 200, // Haiku更高效，适当增加token限制
+        temperature: 0.8,
+        max_tokens: 150,
       }, {
         headers: {
           "HTTP-Referer": "https://eqteacher.com",

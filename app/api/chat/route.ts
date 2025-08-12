@@ -251,7 +251,7 @@ export async function POST(req: Request) {
       { role: 'system', content: enhancedSystemPrompt },
       ...updatedMessages
         .filter(m => m.role !== 'system' && !m.isInitializing && !m.isEvaluation)
-        .slice(-8) // 增加保留消息数量，Haiku可以处理更多上下文
+        .slice(-6) // 只保留最近的消息，避免超过token限制
     ];
     
     console.log('OpenRouter Messages:', JSON.stringify(openRouterMessages, null, 2));
@@ -259,10 +259,10 @@ export async function POST(req: Request) {
     try {
       // 使用OpenAI SDK调用OpenRouter
       const completion = await openai.chat.completions.create({
-        model: "qwen/qwen-2.5-72b-instruct",
+        model: "openai/gpt-4o-mini",
         messages: openRouterMessages as any,
         temperature: 0.7,
-        max_tokens: 400, // 增加token限制，Haiku处理能力更强
+        max_tokens: 300,
       }, {
         headers: {
           "HTTP-Referer": "https://eqteacher.com",
