@@ -40,7 +40,7 @@ export function ScenarioSelector({ onSelect, onGeneratingChange, onStepChange }:
     setError('');
     onGeneratingChange?.(true);
 
-    // 模拟进度步骤 - 独立运行，不阻塞API调用
+    // 模拟进度步骤
     const steps = [
       '正在分析场景需求...',
       '正在生成角色设定...',
@@ -49,30 +49,12 @@ export function ScenarioSelector({ onSelect, onGeneratingChange, onStepChange }:
       '正在完善评分标准...'
     ];
 
-    // 创建进度条动画的引用，用于控制停止
-    let progressInterval: NodeJS.Timeout;
-    let currentStep = 0;
-    
-    // 启动进度条动画（独立运行）
-    const startProgressAnimation = () => {
-      progressInterval = setInterval(() => {
-        currentStep = (currentStep + 1) % steps.length;
-        onStepChange?.(currentStep);
-      }, 2000); // 每2秒切换一步
-    };
-
-    // 停止进度条动画
-    const stopProgressAnimation = () => {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
-    };
-
-    // 启动进度条动画
-    startProgressAnimation();
+    for (let i = 0; i < steps.length; i++) {
+      onStepChange?.(i);
+      await new Promise(resolve => setTimeout(resolve, 3000)); // 每步延迟3秒
+    }
 
     try {
-      // 并行调用API（不等待进度条）
       const response = await fetch('/api/generate-scenario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,18 +67,9 @@ export function ScenarioSelector({ onSelect, onGeneratingChange, onStepChange }:
       if (!response.ok) throw new Error('生成场景失败');
       
       const data = await response.json();
-      
-      // API调用成功，立即停止进度条动画
-      stopProgressAnimation();
-      
-      // 直接跳转到聊天页面
       onSelect(data.scenarioId);
     } catch (error) {
       console.error('Error generating scenario:', error);
-      
-      // API调用失败，也要停止进度条动画
-      stopProgressAnimation();
-      
       setError('生成场景失败，请重试');
     } finally {
       setIsLoading(false);
