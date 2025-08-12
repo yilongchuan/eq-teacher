@@ -151,7 +151,7 @@ export async function POST(req: Request) {
     try {
       // 使用OpenAI SDK调用OpenRouter生成场景
       const completion = await openai.chat.completions.create({
-        model: "openai/gpt-4o-mini",
+        model: "anthropic/claude-3.5-haiku",
         messages: [
           {
             role: 'user',
@@ -191,8 +191,8 @@ export async function POST(req: Request) {
 - 只返回JSON，不要任何其他文字`
           }
         ],
-        temperature: 0.5,
-        max_tokens: 1000,
+        temperature: 0.7,
+        max_tokens: 800, // Haiku更高效，适当减少token限制
         response_format: { type: "json_object" }
       }, {
         headers: {

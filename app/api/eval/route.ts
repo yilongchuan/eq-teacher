@@ -228,7 +228,7 @@ ${scenarioData.rubric.map((item: any, index: number) =>
       // 使用OpenAI SDK调用OpenRouter进行评估，添加超时控制
       console.log('🚀 开始调用OpenRouter API评估对话');
       const completionPromise = openai.chat.completions.create({
-        model: "openai/gpt-4o-mini",
+        model: "anthropic/claude-3.5-haiku",
         messages: [
           {
             role: 'user',
@@ -266,7 +266,7 @@ ${scenarioData.rubric.map((item: any, index: number) =>
           }
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: 800, // Haiku更高效，可以减少token限制
         response_format: { type: "json_object" }
       });
       

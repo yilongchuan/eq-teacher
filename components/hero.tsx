@@ -74,7 +74,7 @@ export function Hero() {
             >
               <div className="flex items-center space-x-2 text-sm text-slate-600">
                 <Award className="w-4 h-4 text-amber-500" />
-                <span>使用ChatGPT最新模型驱动</span>
+                <span>使用最新AI大模型驱动</span>
               </div>
               {/* <div className="flex items-center space-x-2 text-sm text-slate-600">
                 <Shield className="w-4 h-4 text-indigo-500" />

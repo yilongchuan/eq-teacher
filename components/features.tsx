@@ -12,7 +12,7 @@ const features = [
   {
     icon: Gauge,
     title: "AI实时评分",
-    description: "使用ChatGPT先进模型，在10秒内从同理心、清晰度、自信等维度评估你的表现。",
+    description: "使用AI先进模型，在10秒内从同理心、清晰度、自信等维度评估你的表现。",
   },
   {
     icon: PanelsTopLeft,
