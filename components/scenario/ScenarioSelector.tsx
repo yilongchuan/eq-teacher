@@ -40,30 +40,32 @@ export function ScenarioSelector({ onSelect, onGeneratingChange, onStepChange }:
     setError('');
     onGeneratingChange?.(true);
 
-    // 模拟进度步骤
-    const steps = [
-      '正在分析场景需求...',
-      '正在生成角色设定...',
-      '正在构建对话情境...',
-      '正在优化训练内容...',
-      '正在完善评分标准...'
-    ];
+    // 立即开始API调用
+    const apiPromise = fetch('/api/generate-scenario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domain: selectedDomain,
+        difficulty: selectedDifficulty,
+      }),
+    });
 
-    for (let i = 0; i < steps.length; i++) {
-      onStepChange?.(i);
-      await new Promise(resolve => setTimeout(resolve, 3000)); // 每步延迟3秒
-    }
+    // 同时开始显示进度动画
+    let currentStep = 0;
+    const maxStep = 4; // 0-4 对应5个步骤
+    onStepChange?.(currentStep);
+    
+    const progressInterval = setInterval(() => {
+      if (currentStep < maxStep) {
+        currentStep++;
+        onStepChange?.(currentStep);
+      }
+      // 到达最后一步时停止递增，但保持interval运行直到API完成
+    }, 3000); // 每3秒更新一次
 
     try {
-      const response = await fetch('/api/generate-scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          domain: selectedDomain,
-          difficulty: selectedDifficulty,
-        }),
-      });
-
+      const response = await apiPromise;
+      
       if (!response.ok) throw new Error('生成场景失败');
       
       const data = await response.json();
@@ -72,6 +74,7 @@ export function ScenarioSelector({ onSelect, onGeneratingChange, onStepChange }:
       console.error('Error generating scenario:', error);
       setError('生成场景失败，请重试');
     } finally {
+      clearInterval(progressInterval); // 停止进度动画
       setIsLoading(false);
       onGeneratingChange?.(false);
       onStepChange?.(0);

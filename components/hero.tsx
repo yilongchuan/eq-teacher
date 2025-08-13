@@ -35,8 +35,8 @@ export function Hero() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
               >
-                掌握关键对话技巧—
-                <span className="text-indigo-600">随时随地练习。</span>
+                提升情商沟通能力—
+                <span className="text-indigo-600">AI陪你练对话。</span>
               </motion.h1>
 
               <motion.p
